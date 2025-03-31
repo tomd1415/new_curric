@@ -53,7 +53,7 @@ ALTER DATABASE exhall_curriculum OWNER TO curric_user;
 
 ### 3. Create the database schema:
 
-## Connect to the database as the new user
+#### Connect to the database as the new user
 ```
 psql -U curric_user -d exhall_curriculum
 ```
