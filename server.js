@@ -1,6 +1,21 @@
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
 const { Pool } = require('pg');
 require('dotenv').config();
 
+// Initialize app
+const app = express();
+const port = process.env.PORT || 5000;
+
+// Middleware
+app.use(cors());
+app.use(helmet());
+app.use(morgan('dev'));
+app.use(express.json());
+
+// Database connection
 const pool = new Pool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
@@ -9,18 +24,39 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
 });
 
-async function testConnection() {
-  try {
-    const client = await pool.connect();
-    console.log('Connected to PostgreSQL successfully!');
-    const result = await client.query('SELECT current_database()');
-    console.log(`Current database: ${result.rows[0].current_database}`);
-    client.release();
-  } catch (err) {
-    console.error('Error connecting to PostgreSQL:', err);
-  } finally {
-    await pool.end();
+// Test database connection
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('Database connection error:', err);
+  } else {
+    console.log('Database connected successfully');
   }
-}
+});
 
-testConnection();
+// Routes
+const authRoutes = require('./routes/auth');
+const subjectRoutes = require('./routes/subjects');
+const curriculumRoutes = require('./routes/curriculum');
+const userRoutes = require('./routes/users');
+
+app.use('/api/auth', authRoutes);
+app.use('/api/subjects', subjectRoutes);
+app.use('/api/curriculum', curriculumRoutes);
+app.use('/api/users', userRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ 
+    success: false, 
+    message: 'An unexpected error occurred',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// Start server
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+
+module.exports = app;
