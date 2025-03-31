@@ -51,13 +51,13 @@ ALTER DATABASE exhall_curriculum OWNER TO curric_user;
 \q
 ```
 
-#3. Create the database schema:
+# 3. Create the database schema:
 
 ## Connect to the database as the new user
 ```
 psql -U curric_user -d exhall_curriculum
 ```
-#4. Execute the following SQL to create the initial tables:
+# 4. Execute the following SQL to create the initial tables:
 ```
 -- Create subjects table
 CREATE TABLE subjects (
