@@ -1,0 +1,16 @@
+.editable {
+    background-color: #ffffe0;
+    padding: 10px;
+}
+textarea {
+    width: 100%;
+    height: auto;
+    box-sizing: border-box;
+    padding: 10px;
+    font-size: 14px;
+    line-height: 1.6;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    resize: vertical;
+    overflow: hidden;
+}
