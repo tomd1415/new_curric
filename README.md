@@ -152,11 +152,10 @@ npm-debug.log
 dist/
 build/
 
-3. Connect to GitHub repository:
-```
-```
+3. Connect to GitHub repository: ```
 git remote add origin https://github.com/yourusername/exhall-curriculum.git
-
+````
+```
 ## Project Structure
 
 The project follows this structure:
