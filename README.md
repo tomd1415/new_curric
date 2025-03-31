@@ -13,7 +13,7 @@ A web-based curriculum management system for Exhall School, allowing teachers to
 
 ### Database Setup
 
-1. Install PostgreSQL if not already installed:
+### 1. Install PostgreSQL if not already installed:
 
 #### On Debian
 ```
@@ -24,7 +24,7 @@ sudo apt install postgresql postgresql-contrib
 ```
 emerge --ask dev-db/postgresql
 ```
-2. Create a new PostgreSQL user for the application:
+### 2. Create a new PostgreSQL user for the application:
 
 #### Log in as the postgres user
 ```
@@ -51,13 +51,13 @@ ALTER DATABASE exhall_curriculum OWNER TO curric_user;
 \q
 ```
 
-# 3. Create the database schema:
+### 3. Create the database schema:
 
 ## Connect to the database as the new user
 ```
 psql -U curric_user -d exhall_curriculum
 ```
-# 4. Execute the following SQL to create the initial tables:
+### 4. Execute the following SQL to create the initial tables:
 ```
 -- Create subjects table
 CREATE TABLE subjects (
@@ -136,9 +136,9 @@ BEFORE UPDATE ON curriculum_plans
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 ```
-### Environment Configuration
+## Environment Configuration
 
-#### 1. Create a `.env` file at the root of your project:
+### 1. Create a `.env` file at the root of your project:
 ```
 DB_HOST=localhost
 DB_PORT=5432
@@ -147,9 +147,9 @@ DB_USER=curric_user
 DB_PASSWORD=your_secure_password
 JWT_SECRET=your_jwt_secret_key
 ```
-### Repository Setup
+## Repository Setup
 
-#### 1. Initialize Git repository:
+### 1. Initialize Git repository:
 ```
 git init
 ```
@@ -162,7 +162,7 @@ npm-debug.log
 dist/
 build/
 ```
-#### 3. Connect to GitHub repository: 
+### 3. Connect to GitHub repository: 
 ```
 git remote add origin https://github.com/yourusername/exhall-curriculum.git
 ```
