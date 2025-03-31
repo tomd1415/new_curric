@@ -15,40 +15,50 @@ A web-based curriculum management system for Exhall School, allowing teachers to
 
 1. Install PostgreSQL if not already installed:
 
-# On Debian
+#### On Debian
+```
 sudo apt update
 sudo apt install postgresql postgresql-contrib
-   
-# On Gentoo
+```
+#### On Gentoo
+```
 emerge --ask dev-db/postgresql
-
+```
 2. Create a new PostgreSQL user for the application:
 
-# Log in as the postgres user
+#### Log in as the postgres user
+```
 sudo -u postgres psql
-   
-# Create the new role
+```
+#### Create the new role
+```
 CREATE ROLE curric_user WITH LOGIN PASSWORD 'your_secure_password';
-   
-# Create the database
+```
+##### Create the database
+```
 CREATE DATABASE exhall_curriculum;
-   
-# Grant privileges
+```
+#### Grant privileges
+```
 GRANT ALL PRIVILEGES ON DATABASE exhall_curriculum TO curric_user;
-   
-# Make curric_user the owner
+```
+#### Make curric_user the owner
+```
 ALTER DATABASE exhall_curriculum OWNER TO curric_user;
-   
-# Exit
+```
+#### Exit
+```
 \q
+```
 
-3. Create the database schema:
+#3. Create the database schema:
 
-# Connect to the database as the new user
+## Connect to the database as the new user
+```
 psql -U curric_user -d exhall_curriculum
-
-4. Execute the following SQL to create the initial tables:
-
+```
+#4. Execute the following SQL to create the initial tables:
+```
 -- Create subjects table
 CREATE TABLE subjects (
     id SERIAL PRIMARY KEY,
@@ -125,40 +135,41 @@ CREATE TRIGGER update_curriculum_plans_updated_at
 BEFORE UPDATE ON curriculum_plans
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
-
+```
 ### Environment Configuration
 
-1. Create a `.env` file at the root of your project:
-
+#### 1. Create a `.env` file at the root of your project:
+```
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=exhall_curriculum
 DB_USER=curric_user
 DB_PASSWORD=your_secure_password
 JWT_SECRET=your_jwt_secret_key
-
+```
 ### Repository Setup
 
-1. Initialize Git repository:
-
+#### 1. Initialize Git repository:
+```
 git init
-
-2. Create a `.gitignore` file:
-
+```
+### 2. Create a `.gitignore` file:
+```
 node_modules/
 .env
 .DS_Store
 npm-debug.log
 dist/
 build/
-
-3. Connect to GitHub repository: 
+```
+#### 3. Connect to GitHub repository: 
+```
 git remote add origin https://github.com/yourusername/exhall-curriculum.git
 ```
 ## Project Structure
 
 The project follows this structure:
-
+```
 exhall-curriculum/
 ├── client/                  # React frontend
 ├── server/                  # Node.js backend
@@ -174,17 +185,17 @@ exhall-curriculum/
 ```
 ## Development Roadmap
 
-1. **Phase 1**: Basic setup and authentication
+### 1. **Phase 1**: Basic setup and authentication
    - Set up backend API with Express
    - Implement user authentication with JWT
    - Create basic database models
 
-2. **Phase 2**: Core curriculum management
+### 2. **Phase 2**: Core curriculum management
    - Implement CRUD operations for curriculum plans
    - Set up role-based access controls
    - Create frontend views for curriculum display
 
-3. **Phase 3**: Enhanced features
+### 3. **Phase 3**: Enhanced features
    - Improve UI/UX
    - Add reporting capabilities
    - Implement data import/export tools
