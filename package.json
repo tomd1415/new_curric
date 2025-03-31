@@ -1,0 +1,25 @@
+{
+  "name": "new_curric",
+  "version": "1.0.0",
+  "description": "New site for School",
+  "homepage": "https://github.com/tomd1415/new_curric#readme",
+  "bugs": {
+    "url": "https://github.com/tomd1415/new_curric/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomd1415/new_curric.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "pg": "^8.14.1"
+  }
+}
