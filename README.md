@@ -152,9 +152,8 @@ npm-debug.log
 dist/
 build/
 
-3. Connect to GitHub repository: ```
+3. Connect to GitHub repository: 
 git remote add origin https://github.com/yourusername/exhall-curriculum.git
-````
 ```
 ## Project Structure
 
@@ -172,7 +171,7 @@ exhall-curriculum/
 ├── .env                     # Environment variables (not tracked by Git)
 ├── .gitignore               # Git ignore file
 └── README.md                # Project documentation
-
+```
 ## Development Roadmap
 
 1. **Phase 1**: Basic setup and authentication
