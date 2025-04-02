@@ -1,18 +1,11 @@
-// scripts/migrate-data.js
-const mysql = require('mysql2/promise');
+// scripts/migrate-csv-data.js
+const fs = require('fs');
+const csv = require('csv-parser');
 const { Pool } = require('pg');
 require('dotenv').config();
 
-// MySQL connection
-const mysqlConfig = {
-  host: process.env.MYSQL_HOST || 'localhost',
-  user: process.env.MYSQL_USER || 'root',
-  password: process.env.MYSQL_PASSWORD || 'exhall2024',
-  database: process.env.MYSQL_DB || 'exhall_curriculum'
-};
-
 // PostgreSQL connection
-const pgPool = new Pool({
+const pool = new Pool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   database: process.env.DB_NAME,
@@ -21,105 +14,123 @@ const pgPool = new Pool({
 });
 
 async function migrateData() {
-  // MySQL connection
-  const mysqlConn = await mysql.createConnection(mysqlConfig);
-  console.log('Connected to MySQL database');
-
   try {
-    // Migrate subjects
-    console.log('Migrating subjects...');
-    const [subjects] = await mysqlConn.query('SELECT DISTINCT Subject FROM Curriculum');
-    for (const subject of subjects) {
-      await pgPool.query(
-        'INSERT INTO subjects (name) VALUES ($1) ON CONFLICT (name) DO NOTHING',
-        [subject.Subject]
-      );
-    }
-
-    // Migrate year groups
-    console.log('Migrating year groups...');
-    const [yearGroups] = await mysqlConn.query('SELECT DISTINCT YearGroup FROM Curriculum');
-    for (const yearGroup of yearGroups) {
-      // Extract key stage from year group name
-      let keyStage = null;
-      if (yearGroup.YearGroup.includes('Year 1') || yearGroup.YearGroup.includes('Year 2')) {
-        keyStage = 'KS1';
-      } else if (yearGroup.YearGroup.includes('Year 3') || yearGroup.YearGroup.includes('Year 4') || 
-                 yearGroup.YearGroup.includes('Year 5') || yearGroup.YearGroup.includes('Year 6')) {
-        keyStage = 'KS2';
-      } else if (yearGroup.YearGroup.includes('Year 7') || yearGroup.YearGroup.includes('Year 8') || 
-                 yearGroup.YearGroup.includes('Year 9')) {
-        keyStage = 'KS3';
-      } else if (yearGroup.YearGroup.includes('Year 10') || yearGroup.YearGroup.includes('Year 11')) {
-        keyStage = 'KS4';
-      } else if (yearGroup.YearGroup.includes('Post 16')) {
-        keyStage = 'KS5';
-      }
-
-      await pgPool.query(
-        'INSERT INTO year_groups (name, key_stage) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING',
-        [yearGroup.YearGroup, keyStage]
-      );
-    }
-
-    // Migrate terms
-    console.log('Migrating terms...');
-    const terms = [
-      { name: 'Autumn 1', academic_year: '2024-2025' },
-      { name: 'Autumn 2', academic_year: '2024-2025' },
-      { name: 'Spring 1', academic_year: '2024-2025' },
-      { name: 'Spring 2', academic_year: '2024-2025' },
-      { name: 'Summer 1', academic_year: '2024-2025' },
-      { name: 'Summer 2', academic_year: '2024-2025' }
-    ];
-
-    for (const term of terms) {
-      await pgPool.query(
-        'INSERT INTO terms (name, academic_year) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING',
-        [term.name, term.academic_year]
-      );
-    }
-
-    // Migrate curriculum plans from subject_overview table
-    console.log('Migrating curriculum plans...');
-    const [subjectOverviews] = await mysqlConn.query('SELECT * FROM subject_overview');
+    console.log('Starting CSV data migration...');
     
-    for (const overview of subjectOverviews) {
-      // Get IDs from the PostgreSQL database
-      const subjectRes = await pgPool.query('SELECT id FROM subjects WHERE name = $1', [overview.subject]);
-      const yearGroupRes = await pgPool.query('SELECT id FROM year_groups WHERE name = $1', [overview.Year]);
-      const termRes = await pgPool.query('SELECT id FROM terms WHERE name = $1', [overview.Term]);
-      
-      if (subjectRes.rows.length > 0 && yearGroupRes.rows.length > 0 && termRes.rows.length > 0) {
-        const subjectId = subjectRes.rows[0].id;
-        const yearGroupId = yearGroupRes.rows[0].id;
-        const termId = termRes.rows[0].id;
+    // Read the CSV file
+    const results = [];
+    fs.createReadStream('Exhallart.csv')
+      .pipe(csv())
+      .on('data', (data) => results.push(data))
+      .on('end', async () => {
+        console.log(`Read ${results.length} rows from CSV`);
         
-        await pgPool.query(
-          `INSERT INTO curriculum_plans 
-           (subject_id, year_group_id, term_id, area_of_study, literacy_focus, numeracy_focus, smsc) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7) 
-           ON CONFLICT (subject_id, year_group_id, term_id) DO UPDATE 
-           SET area_of_study = $4, literacy_focus = $5, numeracy_focus = $6, smsc = $7`,
-          [
-            subjectId, 
-            yearGroupId, 
-            termId, 
-            overview.Area_of_study, 
-            overview.Literacy_focus, 
-            overview.Numeracy_focus, 
-            overview.SMSC
-          ]
-        );
-      }
-    }
-
-    console.log('Data migration completed successfully');
+        // Process each row
+        for (const row of results) {
+          // Find or create subject
+          let subjectRes = await pool.query(
+            'SELECT id FROM subjects WHERE name = $1',
+            [row.Area_of_study]
+          );
+          
+          let subjectId;
+          if (subjectRes.rows.length === 0) {
+            const newSubject = await pool.query(
+              'INSERT INTO subjects (name) VALUES ($1) RETURNING id',
+              [row.Area_of_study]
+            );
+            subjectId = newSubject.rows[0].id;
+          } else {
+            subjectId = subjectRes.rows[0].id;
+          }
+          
+          // Find or create year group
+          let yearGroupRes = await pool.query(
+            'SELECT id FROM year_groups WHERE name = $1',
+            [row.Year]
+          );
+          
+          let yearGroupId;
+          if (yearGroupRes.rows.length === 0) {
+            // Extract key stage from year group
+            let keyStage = null;
+            if (row.Year.includes('Year 1') || row.Year.includes('Year 2')) {
+              keyStage = 'KS1';
+            } else if (row.Year.includes('Year 3') || row.Year.includes('Year 4') || 
+                       row.Year.includes('Year 5') || row.Year.includes('Year 6')) {
+              keyStage = 'KS2';
+            } else if (row.Year.includes('Year 7') || row.Year.includes('Year 8') || 
+                       row.Year.includes('Year 9')) {
+              keyStage = 'KS3';
+            } else if (row.Year.includes('Year 10') || row.Year.includes('Year 11')) {
+              keyStage = 'KS4';
+            } else if (row.Year.includes('Post 16')) {
+              keyStage = 'KS5';
+            }
+            
+            const newYearGroup = await pool.query(
+              'INSERT INTO year_groups (name, key_stage) VALUES ($1, $2) RETURNING id',
+              [row.Year, keyStage]
+            );
+            yearGroupId = newYearGroup.rows[0].id;
+          } else {
+            yearGroupId = yearGroupRes.rows[0].id;
+          }
+          
+          // Find or create term
+          let termRes = await pool.query(
+            'SELECT id FROM terms WHERE name = $1',
+            [row.Term]
+          );
+          
+          let termId;
+          if (termRes.rows.length === 0) {
+            const newTerm = await pool.query(
+              'INSERT INTO terms (name, academic_year) VALUES ($1, $2) RETURNING id',
+              [row.Term, '2024-2025']
+            );
+            termId = newTerm.rows[0].id;
+          } else {
+            termId = termRes.rows[0].id;
+          }
+          
+          // Insert or update curriculum plan
+          await pool.query(`
+            INSERT INTO curriculum_plans 
+            (subject_id, year_group_id, term_id, area_of_study, literacy_focus, numeracy_focus, smsc,
+             knowledge_skills_au1, knowledge_skills_au2, knowledge_skills_sp1, knowledge_skills_sp2, 
+             knowledge_skills_su1, knowledge_skills_su2, key_assessments, key_assessments_au1, 
+             key_assessments_au2, key_assessments_sp1, key_assessments_sp2, key_assessments_su1, 
+             key_assessments_su2, help_at_home, wider_skills)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+            ON CONFLICT (subject_id, year_group_id, term_id) 
+            DO UPDATE SET 
+            area_of_study = $4, literacy_focus = $5, numeracy_focus = $6, smsc = $7,
+            knowledge_skills_au1 = $8, knowledge_skills_au2 = $9, knowledge_skills_sp1 = $10, 
+            knowledge_skills_sp2 = $11, knowledge_skills_su1 = $12, knowledge_skills_su2 = $13,
+            key_assessments = $14, key_assessments_au1 = $15, key_assessments_au2 = $16,
+            key_assessments_sp1 = $17, key_assessments_sp2 = $18, key_assessments_su1 = $19,
+            key_assessments_su2 = $20, help_at_home = $21, wider_skills = $22
+          `, [
+            subjectId, yearGroupId, termId, 
+            row.Area_of_study, row.Literacy_focus, row.Numeracy_focus, row.SMSC,
+            row.Knowledge_and_skills_autumn_Term_1, row.Knowledge_and_skills_autumn_Term_2,
+            row.Knowledge_and_skills_spring_Term_1, row.Knowledge_and_skills_spring_Term_2,
+            row.Knowledge_and_skills_summer_Term_1, row.Knowledge_and_skills_summer_Term_2,
+            row.Key_Assessments, row.key_assessments_au1, row.key_assessments_au2,
+            row.key_assessments_sp1, row.key_assessments_sp2, row.key_assessments_su1,
+            row.key_assessments_su2, row.How_you_can_help_your_child_at_home, row.Wider_skills
+          ]);
+          
+          console.log(`Processed row for ${row.Area_of_study} - ${row.Year} - ${row.Term}`);
+        }
+        
+        console.log('Data migration completed successfully');
+        await pool.end();
+      });
   } catch (err) {
     console.error('Error during migration:', err);
-  } finally {
-    await mysqlConn.end();
-    await pgPool.end();
+    await pool.end();
   }
 }
 
